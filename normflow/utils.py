@@ -5,9 +5,12 @@ from typing import Callable
 
 
 def _except(f: Callable, x: torch.Tensor, *dim):
-    # apply f on all dimensions except those specified in dim
+    """ Apply f on all dimensions except those specified in dim """
     result = x
-    dimensions = [d for d in range(len(x.shape)) if d not in dim]
+    dimensions = [d for d in range(x.dim()) if d not in dim]
+
+    if not dimensions:
+        raise ValueError(f"Cannot exclude dims {dim} from x with shape {x.shape}: No dimensions left.")
 
     return f(result, dim=dimensions)
 

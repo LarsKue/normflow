@@ -23,9 +23,10 @@ class Flow(Invertible):
 
         log_prob = self.distribution.log_prob(z)
 
-        # product of probabilities is the total probability
-        # in the log this turns into a sum
-        log_prob = utils.mean_except_batch(log_prob)
+        if log_prob.dim() > 1:
+            # product of probabilities is the total probability
+            # in the log this turns into a sum
+            log_prob = utils.sum_except_batch(log_prob)
 
         return z, log_prob + logabsdet
 
@@ -33,8 +34,15 @@ class Flow(Invertible):
         """ Return the inverse transform """
         log_prob = self.distribution.log_prob(z)
 
-        log_prob = utils.mean_except_batch(log_prob)
+        if log_prob.dim() > 1:
+            log_prob = utils.sum_except_batch(log_prob)
 
         x, logabsdet = self.transform.inverse(z)
 
         return x, log_prob - logabsdet
+
+    def __call__(self, xz: torch.Tensor, reverse: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
+        if reverse:
+            return self.inverse(xz)
+
+        return self.forward(xz)

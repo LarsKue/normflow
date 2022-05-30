@@ -4,15 +4,12 @@ import torch.nn as nn
 
 from typing import Tuple
 
-from unstable import unstable
-
 from .base import Transform
 
 
-@unstable
 class ActNorm(Transform):
     """
-    Activation Norm as described by:
+    Activation Norm as described by
     Kingma et al.
     Glow: Generative Flow with Invertible 1x1 Convolutions
     """
@@ -21,18 +18,25 @@ class ActNorm(Transform):
         self.scale = None
         self.shift = None
 
-        # should register this as a buffer, so it gets saved alongside the model
-        self.register_buffer("initialized", torch.tensor(False))
+    @property
+    def initialized(self):
+        return self.scale is None or self.shift is None
 
-    def initialize_(self, x: torch.Tensor) -> None:
-        std, mean = torch.std_mean(x.detach().reshape(x.shape[0], -1), dim=0, unbiased=False)
+    def initialize(self, x: torch.Tensor) -> None:
+        batch_size = x.shape[0]
+        x = x.detach().reshape(batch_size, -1)
+        std, mean = torch.std_mean(x, dim=0, unbiased=False)
+
         self.scale = nn.Parameter(1 / std)
         self.shift = nn.Parameter(-mean)
-        self.initialized = torch.tensor(True)
+
+    def reset(self):
+        self.scale = None
+        self.shift = None
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         if not self.initialized:
-            self.initialize_(x)
+            self.initialize(x)
 
         z = self.scale * x + self.shift
 
@@ -40,7 +44,9 @@ class ActNorm(Transform):
 
         return z, logabsdet
 
-    def inverse(self, z: torch.Tensor) -> torch.Tensor:
+    def inverse(self, z: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         x = (z - self.shift) / self.scale
 
-        return x
+        logabsdet = -torch.log(torch.abs(self.scale))
+
+        return x, logabsdet
