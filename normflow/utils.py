@@ -33,3 +33,11 @@ def mean_except(x: torch.Tensor, *dim):
 def mean_except_batch(x):
     """ See sum_except_batch """
     return mean_except(x, 0)
+
+
+def std_except(x: torch.Tensor, *dim):
+    return _except(torch.std, x, *dim)
+
+
+def std_except_batch(x):
+    return std_except(x, 0)

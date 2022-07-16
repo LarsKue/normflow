@@ -2,7 +2,6 @@
 import pytorch_lightning as pl
 import torch
 import pathlib
-import numpy as np
 import matplotlib.pyplot as plt
 
 

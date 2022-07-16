@@ -8,9 +8,10 @@ from itertools import chain
 
 import normflow as nf
 
-from examples.fashion_mnist.data import train_dataset, val_dataset
-from examples.fashion_mnist.model import NFModule
-from examples.fashion_mnist.callbacks import PeriodicPlot
+from examples.single_class.fashion_mnist.data import train_dataset, val_dataset
+from examples.single_class.fashion_mnist.model import NFModule
+from examples.single_class.fashion_mnist.callbacks import PeriodicPlot
+from examples.single_class.fashion_mnist.network import AutoRegressiveNetwork
 
 
 def make_params_network(in_features, hidden_features, activation=nn.ReLU, num_params=2, num_layers=1):
@@ -34,14 +35,14 @@ def make_params_network(in_features, hidden_features, activation=nn.ReLU, num_pa
     )
 
 
-def make_coupling(in_features, hidden_features, activation, num_layers):
+def make_coupling(in_features, hidden_features, activation, hidden_layers):
     split = nf.splits.EvenSplit()
 
-    params_network = make_params_network(
+    params_network = AutoRegressiveNetwork(
         in_features=in_features,
         hidden_features=hidden_features,
+        hidden_layers=hidden_layers,
         activation=activation,
-        num_layers=num_layers
     )
 
     coupling = nf.couplings.AffineCoupling(params_network)
@@ -58,18 +59,21 @@ def main():
     in_features = 28 * 28 // 2
     hidden_features = 512
     activation = nn.ReLU
-    num_layers = 4
+    hidden_layers = 4
+
+    # TODO
 
     transform = nf.transforms.CompositeTransform(
+        nf.transforms.blocks.SCPBlock(),
         # ensure there are an odd number of reverse permutations
         # so that each input half is transformed the same number of times
-        make_coupling(in_features, hidden_features, activation, num_layers),
-        nf.transforms.permutations.ReversePermutation(),
-        make_coupling(in_features, hidden_features, activation, num_layers),
-        nf.transforms.permutations.ReversePermutation(),
-        make_coupling(in_features, hidden_features, activation, num_layers),
-        nf.transforms.permutations.ReversePermutation(),
-        make_coupling(in_features, hidden_features, activation, num_layers),
+        make_coupling(in_features, hidden_features, activation, hidden_layers),
+        nf.permutations.ReversePermutation(),
+        make_coupling(in_features, hidden_features, activation, hidden_layers),
+        nf.permutations.ReversePermutation(),
+        make_coupling(in_features, hidden_features, activation, hidden_layers),
+        nf.permutations.ReversePermutation(),
+        make_coupling(in_features, hidden_features, activation, hidden_layers),
     )
 
     distribution = torch.distributions.MultivariateNormal(

@@ -1,7 +1,6 @@
 import torch
 import torch.nn.functional as F
 
-from typing import Tuple
 
 import normflow.utils as utils
 
@@ -15,8 +14,18 @@ class AffineCoupling(AutoRegressiveCoupling):
     The shift is unconstrained
     """
 
-    def _forward(self, params: torch.Tensor, x2: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        unconstrained_scale, shift = torch.tensor_split(params, 2, -1)
+    def __init__(self, *args, dim: int = -1, **kwargs):
+        """
+        @param dim: The dimension along which parameters will be split
+        """
+        super().__init__(*args, **kwargs)
+        self.register_buffer("dim", torch.tensor(dim, dtype=torch.int64))
+
+    def _forward(self, params: torch.Tensor, x2: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        @param params: Tensor of shape (..., 2, ...) that specifies the scale and shift
+        """
+        unconstrained_scale, shift = torch.tensor_split(params, sections=2, dim=self.dim)
 
         scale = F.softplus(unconstrained_scale)
 
@@ -28,8 +37,11 @@ class AffineCoupling(AutoRegressiveCoupling):
 
         return z2, logabsdet
 
-    def _inverse(self, params: torch.Tensor, z2: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        unconstrained_scale, shift = torch.tensor_split(params, 2, -1)
+    def _inverse(self, params: torch.Tensor, z2: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        @param params: Tensor of shape (..., 2) that specifies scale and shift
+        """
+        unconstrained_scale, shift = torch.tensor_split(params, sections=2, dim=self.dim)
 
         scale = F.softplus(unconstrained_scale)
 

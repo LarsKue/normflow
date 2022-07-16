@@ -1,7 +1,6 @@
 
 import torch
 
-from typing import Tuple
 
 from .base import Permutation
 
@@ -21,14 +20,12 @@ class IndexPermutation(Permutation):
     def inverse_indices(self) -> torch.Tensor:
         return torch.argsort(self.indices)
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         z = torch.index_select(x, self.dim, self.indices.to(x.device))
-        logabsdet = x.new_zeros(x.shape[0])
 
-        return z, logabsdet
+        return z
 
-    def inverse(self, z: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def inverse(self, z: torch.Tensor) -> torch.Tensor:
         x = torch.index_select(z, self.dim, self.inverse_indices.to(z.device))
-        logabsdet = z.new_zeros(z.shape[0])
 
-        return x, logabsdet
+        return x

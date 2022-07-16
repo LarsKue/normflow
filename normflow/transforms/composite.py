@@ -1,6 +1,6 @@
 import torch
+import torch.nn as nn
 
-from typing import Tuple
 
 from .base import Transform
 
@@ -15,27 +15,24 @@ class CompositeTransform(Transform):
     """
     def __init__(self, *transforms: Transform) -> None:
         super().__init__()
-        self.transforms = list(transforms)
+        self.transforms = nn.ModuleList(transforms)
 
-        for idx, transform in enumerate(self.transforms):
-            self.add_module(str(idx), transform)
-
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor, *, condition: torch.Tensor = None) -> tuple[torch.Tensor, torch.Tensor]:
         z = x
         logabsdet = x.new_zeros(x.shape[0])
 
         for transform in self.transforms:
-            z, det = transform.forward(z)
+            z, det = transform.forward(z, condition=condition)
             logabsdet += det
 
         return z, logabsdet
 
-    def inverse(self, z: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def inverse(self, z: torch.Tensor, *, condition: torch.Tensor = None) -> tuple[torch.Tensor, torch.Tensor]:
         x = z
         logabsdet = z.new_zeros(z.shape[0])
 
         for transform in reversed(self.transforms):
-            x, det = transform.inverse(x)
+            x, det = transform.inverse(x, condition=condition)
             logabsdet += det
 
         return x, logabsdet
